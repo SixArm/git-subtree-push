@@ -1,0 +1,110 @@
+#!/bin/sh
+
+# git-subtree-push: Use git to publish a monorepo's git subtrees.
+#
+# Syntax:
+# 
+# ```sh
+# git-subtree-push
+# git-subtree-push --force
+# ```
+# 
+# ## Setup
+# 
+# For each subtree, create a marker file:
+# 
+# ```sh
+# touch my_monorepo/my_project_1/.git-subtree-push
+# touch my_monorepo/my_project_2/.git-subtree-push
+# ```
+# 
+# For each subtree, add a remote:
+# 
+# ```sh
+# git remote add my_project_1 git@github.com:my_user_name/my_project_1.git
+# git remote add my_project_2 git@github.com:my_user_name/my_project_2.git
+# ```
+#
+# Notes:
+# 
+# - The target repos must exist first (create them empty, no README, .gitignore, etc.)
+# - `git subtree push` rewrites history so only commits touching that prefix are included
+# - For large repos, the first push can be slow since it replays the entire history
+# - To re-run later after new commits, just repeat the `git subtree push` commands
+# 
+# ## git-subtree push --force
+#
+# The winning pattern for force-pushing subtrees is:
+#
+# ```sh
+# git subtree split --prefix=<local-subdirectory> --branch <temporary-local-branch-name>
+# git push <remote> <temporary-local-branch-name>:<remote-branch-name> --force
+# git branch -D <temporary-local-branch-name>
+# ```
+# 
+# The `--branch` flag is the important step because it creates a temporary local
+# branch from the split, bypassing any stale cache that could cause an error
+# such as the error message "no new revisions found".
+#
+# ## Tracking
+# 
+# - Package: git-subtree-push
+# - Version: 1.0.0
+# - Created: 2026-03-15T20:51:39Z
+# - Updated: 2026-03-26T12:46:01Z
+# - License: MIT or Apache-2.0 or GPL-2.0 or GPL-3.0 or contact us for more
+# - Contact: Joel Parker Henderson <joel@joelparkerhenderson.com>
+
+set -euf
+top="$(git rev-parse --show-toplevel)"
+branch="main"
+
+help(){
+cat << HERE
+git-subtree-push: Use git to publish a git monorepo's git subtrees.
+
+Syntax:
+    git-subtree-push
+    git-subtree-push --force
+
+HERE
+}
+
+# Return all subdirectories that contain indicator file `.git-subtree-push`.
+subdirectories() (
+    pos=$(( ${#top} + 2 ))
+    find "$top" -name .git-subtree-push | xargs dirname | cut -c $pos-
+)
+
+case $# in
+    0)
+        for subdirectory in $(subdirectories); do
+            remote=$(basename "$subdirectory")
+            set -x
+            git subtree push --prefix="$subdirectory" "$remote" "$branch"
+            { set +x; } 2>/dev/null
+        done
+        ;;
+    1)
+        case "$1" in
+            -h|--help)
+                help; exit 0
+                ;;
+            -f|--force)
+                for subdirectory in $(subdirectories); do
+                    remote=$(basename "$subdirectory")
+                    git_subtree_push_branch="git-subtree-push-$remote"
+                    set -x
+                    git subtree split --prefix="$subdirectory" --branch "$git_subtree_push_branch" && git push "$remote" "$git_subtree_push_branch:$branch" --force && git branch -D "$git_subtree_push_branch"
+                    { set +x; } 2>/dev/null
+                done
+                ;;
+            *)
+                help; exit 1
+                ;;
+        esac
+        ;;
+    *)
+        help; exit 1
+        ;;
+esac
