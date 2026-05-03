@@ -46,12 +46,28 @@
 # branch from the split, bypassing any stale cache that could cause an error
 # such as the error message "no new revisions found".
 #
+# ## Mutiple endpoints
+#
+# If you're pushing to mutiple endpoints, such as to Codeberg.org and GitHub.com,
+# then you'll need to configure each subtree with its own pushurl settings:
+# 
+# ```config
+# [remote "my_project_1"]
+#     url = git@github.com:my_user_name/my_project_1.git
+#     pushurl = git@codeberg.org:my_user_name/my_project_1.git
+#     pushurl = git@github.com:my_user_name/my_project_1.git
+# [remote "my_project_2"]
+#     url = git@github.com:my_user_name/my_project_2.git
+#     pushurl = git@codeberg.org:my_user_name/my_project_2.git
+#     pushurl = git@github.com:my_user_name/my_project_2.git
+# ```
+#
 # ## Tracking
 # 
 # - Package: git-subtree-push
 # - Version: 1.0.0
 # - Created: 2026-03-15T20:51:39Z
-# - Updated: 2026-03-26T12:46:01Z
+# - Updated: 2026-05-03T15:05:47Z
 # - License: MIT or Apache-2.0 or GPL-2.0 or GPL-3.0 or contact us for more
 # - Contact: Joel Parker Henderson <joel@joelparkerhenderson.com>
 
@@ -73,7 +89,7 @@ HERE
 # Return all subdirectories that contain indicator file `.git-subtree-push`.
 subdirectories() (
     pos=$(( ${#top} + 2 ))
-    find "$top" -name .git-subtree-push | xargs dirname | cut -c $pos-
+    find "$top" -name .git-subtree-push | xargs dirname | cut -c $pos- | sort
 )
 
 case $# in
